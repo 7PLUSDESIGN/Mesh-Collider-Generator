@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesh Collider Generator (Max 256) - OBJ/DAE Edition</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2128;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#e8eaf0;--muted:#7a7f8e;--accent:#4f8aff;--accent2:#2ed8a0;
+  --radius:8px;--radius-lg:12px;
+}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.sep{width:1px;height:20px;background:var(--border2);margin:0 2px}
+.topbar-actions{display:flex;gap:7px;margin-left:auto;align-items:center}
+.btn{padding:5px 13px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text);font-size:12px;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:5px}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#3a78f0}
+.btn.success{background:var(--accent2);border-color:var(--accent2);color:#062918}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:252px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.sec{padding:13px 14px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px}
+.dropzone{border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:20px 12px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:rgba(79,138,255,.07)}
+.dz-icon{font-size:28px;margin-bottom:6px}
+.dz-label{font-size:12px;font-weight:500}
+.dz-hint{color:var(--muted);font-size:11px;margin-top:3px}
+#fileInput{display:none}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.stat{background:var(--surface2);border-radius:var(--radius);padding:7px 9px}
+.stat-lbl{font-size:10px;color:var(--muted);margin-bottom:2px}
+.stat-val{font-size:14px;font-weight:600}
+.stat-val.a{color:var(--accent)}.stat-val.g{color:var(--accent2)}
+.algo-tabs{display:flex;gap:5px;margin-bottom:8px}
+.algo-tab{flex:1;padding:5px 3px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;text-align:center;transition:all .15s}
+.algo-tab.active{background:rgba(79,138,255,.15);border-color:var(--accent);color:var(--accent)}
+.algo-desc{color:var(--muted);font-size:11px;line-height:1.5}
+.rrow{display:flex;flex-direction:column;gap:4px;margin-bottom:11px}
+.rrow:last-child{margin-bottom:0}
+.rhead{display:flex;justify-content:space-between;align-items:center}
+.rlbl{font-size:12px}
+.rval{font-size:11px;font-weight:600;color:var(--accent)}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--surface2);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+.crow{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:6px}
+.crow:last-child{margin-bottom:0}
+.clbl{font-size:12px;flex:1}.csub{color:var(--muted);font-size:10px}
+.toggle{width:33px;height:18px;border-radius:9px;background:var(--surface2);border:1px solid var(--border2);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent);border-color:var(--accent)}
+.toggle::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s}
+.toggle.on::after{left:18px}
+.vport-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.vtoolbar{display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.vbtn{padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;transition:all .15s}
+.vbtn.active,.vbtn:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+.vlbl{color:var(--muted);font-size:11px;margin-left:auto}
+.vcontainer{flex:1;position:relative;overflow:hidden}
+#c{display:block;width:100%;height:100%}
+.empty{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.empty-icon{font-size:46px;margin-bottom:10px;opacity:.2}
+.empty-txt{color:var(--muted);font-size:13px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.badge.ready{background:rgba(46,216,160,.12);color:var(--accent2)}
+.badge.proc{background:rgba(79,138,255,.12);color:var(--accent)}
+.badge.idle{background:var(--surface2);color:var(--muted)}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.pbar{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:5px}
+.pfill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;width:0%}
+.output{width:225px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.redbar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:5px}
+.redfill{height:100%;background:var(--accent2);transition:width .5s ease}
+.limit-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;background:rgba(46,216,160,.15);color:var(--accent2);margin-left:6px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div>Mesh Collider Generator</div>
+  <div class="sep"></div>
+  <span id="badge" class="badge idle"><span class="bdot"></span>Model Not Loaded</span>
+  <div class="topbar-actions">
+    <button class="btn" id="btnWire">Wireframe</button>
+    <button class="btn primary" id="btnGen" disabled>⚡ Generate Collider</button>
+  </div>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <div class="sec">
+      <div class="sec-title">Import Model</div>
+      <div class="dropzone" id="dz">
+        <div class="dz-icon">📦</div>
+        <div class="dz-label">Drop 3D file here</div>
+        <div class="dz-hint">OBJ · STL · PLY · FBX · DAE · GLTF · GLB</div>
+        <input type="file" id="fileInput" accept=".obj,.stl,.ply,.fbx,.dae,.gltf,.glb">
+      </div>
+      <button class="btn" style="width:100%;margin-top:7px;justify-content:center" onclick="document.getElementById('fileInput').click()">Choose File</button>
+    </div>
+    <div class="sec">
+      <div class="sec-title">Original Mesh</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-lbl">Vertices</div><div class="stat-val a" id="oV">—</div></div>
+        <div class="stat"><div class="stat-lbl">Triangles</div><div class="stat-val a" id="oT">—</div></div>
+        <div class="stat"><div class="stat-lbl">Size X×Y×Z</div><div class="stat-val" id="oB" style="font-size:11px">—</div></div>
+        <div class="stat"><div class="stat-lbl">Center</div><div class="stat-val" id="oC" style="font-size:11px">—</div></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">Algorithm</div>
+      <div class="algo-tabs" id="algoTabs">
+        <div class="algo-tab active" data-a="convex">Convex</div>
+        <div class="algo-tab" data-a="simplified">Simplified</div>
+        <div class="algo-tab" data-a="voxel">Voxel</div>
+      </div>
+      <div class="algo-desc" id="algoDesc">Convex Hull — Lightweight polygon hull, best for rigid bodies.</div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">Settings</div>
+      <div class="rrow">
+        <div class="rhead"><span class="rlbl">Target Reduction</span><span class="rval" id="redV">80%</span></div>
+        <input type="range" id="redS" min="10" max="99" value="80">
+      </div>
+      <div class="rrow">
+        <div class="rhead">
+          <span class="rlbl">Max Triangles <span class="limit-badge">≤ 256</span></span>
+          <span class="rval" id="maxTV">32</span>
+        </div>
+        <input type="range" id="maxTS" min="12" max="256" value="32" step="2">
+      </div>
+      <div class="crow">
+        <div><div class="clbl">Weld Vertices</div><div class="csub">Merge nearby vertices</div></div>
+        <div class="toggle on" id="togWeld" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="crow">
+        <div><div class="clbl">Double Sided</div><div class="csub">Render both sides</div></div>
+        <div class="toggle on" id="togDouble" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="sec" id="progSec" style="display:none">
+      <div class="sec-title">Processing</div>
+      <div id="progLbl" style="color:var(--muted);font-size:11px">Processing...</div>
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    </div>
+  </div>
+
+  <div class="vport-wrap">
+    <div class="vtoolbar">
+      <button class="vbtn active" id="vbBoth" onclick="setView('both')">Both</button>
+      <button class="vbtn" id="vbOrig" onclick="setView('orig')">Original</button>
+      <button class="vbtn" id="vbColl" onclick="setView('coll')">Collider</button>
+      <div class="sep"></div>
+      <button class="vbtn" onclick="resetCam()">Reset View</button>
+      <button class="vbtn" id="gridBtn" onclick="toggleGrid()">Grid ✓</button>
+      <span class="vlbl">🖱 Drag to Rotate · Scroll to Zoom · Right Click to Pan</span>
+    </div>
+    <div class="vcontainer">
+      <canvas id="c"></canvas>
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">🎯</div>
+        <div class="empty-txt">Import a 3D model to start<br><small style="font-size:11px;opacity:.7">Supports OBJ, STL, PLY, FBX, DAE, GLTF, GLB</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="output">
+    <div class="sec">
+      <div class="sec-title">Collider Stats</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-lbl">Vertices</div><div class="stat-val g" id="cV">—</div></div>
+        <div class="stat"><div class="stat-lbl">Triangles</div><div class="stat-val g" id="cT">—</div></div>
+      </div>
+      <div style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px">
+          <span>Reduction</span><span id="redPct">—</span>
+        </div>
+        <div class="redbar"><div class="redfill" id="redfill"></div></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">Collider Info</div>
+      <div id="collInfo" style="color:var(--muted);font-size:11px;line-height:1.6">Generate collider to view info</div>
+    </div>
+    <div class="sec" style="flex:1;"></div>
+    <div class="sec">
+      <div class="sec-title">Export Options</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn success" id="btnExpOBJ" disabled style="justify-content:center;font-size:11px">↓ Export OBJ (.obj)</button>
+        <button class="btn success" id="btnExpDAE" disabled style="justify-content:center;font-size:11px">↓ Export DAE (.dae)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/PLYLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/ColladaLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+
+<script>
+const MAX_TRIANGLES = 256;
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setClearColor(0x0e0f11, 1);
+renderer.shadowMap.enabled = true;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.001, 5000);
+camera.position.set(0, 0, 5);
+
+const ctrl = (() => {
+  let isDragging=false, isRight=false, lastX=0, lastY=0;
+  let theta=0.5, phi=1.0, radius=5;
+  let panX=0, panY=0;
+  function update(){
+    const x = radius*Math.sin(phi)*Math.sin(theta)+panX;
+    const y = radius*Math.cos(phi)+panY;
+    const z = radius*Math.sin(phi)*Math.cos(theta);
+    camera.position.set(x, y, z);
+    camera.lookAt(panX, panY, 0);
+  }
+  canvas.addEventListener('mousedown', e => { isDragging=true; isRight=(e.button===2); lastX=e.clientX; lastY=e.clientY; e.preventDefault(); });
+  window.addEventListener('mouseup', () => isDragging=false);
+  window.addEventListener('mousemove', e => {
+    if(!isDragging) return;
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    lastX=e.clientX; lastY=e.clientY;
+    if(isRight){ panX-=dx*radius*0.002; panY+=dy*radius*0.002; }
+    else { theta-=dx*0.01; phi=Math.max(0.05,Math.min(Math.PI-0.05,phi+dy*0.01)); }
+    update();
+  });
+  canvas.addEventListener('wheel', e => { radius=Math.max(0.01,radius*(1+e.deltaY*0.001)); update(); e.preventDefault(); },{passive:false});
+  canvas.addEventListener('contextmenu', e=>e.preventDefault());
+  return { update, setRadius(r){radius=r;update();}, setTarget(x,y,z){panX=x;panY=y;update();}, getRadius(){return radius;} };
+})();
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+dl.position.set(3,5,4); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x4488ff, 0.35);
+dl2.position.set(-3,2,-4); scene.add(dl2);
+
+let grid = new THREE.GridHelper(10,20,0x333344,0x222233);
+scene.add(grid);
+
+function resize(){
+  const w=canvas.parentElement.clientWidth, h=canvas.parentElement.clientHeight;
+  renderer.setSize(w,h);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize); resize();
+(function loop(){ requestAnimationFrame(loop); renderer.render(scene,camera); })();
+
+let origMesh=null, collMesh=null, origGeo=null, collGeo=null;
+let wireMode=false, viewMode='both', curAlgo='convex';
+
+const MAT_ORIG = new THREE.MeshLambertMaterial({color:0x4f8aff,transparent:true,opacity:0.55,side:THREE.DoubleSide});
+const MAT_COLL = new THREE.MeshLambertMaterial({color:0x2ed8a0,transparent:true,opacity:0.65,side:THREE.DoubleSide});
+const MAT_ORIG_W = new THREE.MeshBasicMaterial({color:0x6699ff,wireframe:true,transparent:true,opacity:0.5});
+const MAT_COLL_W = new THREE.MeshBasicMaterial({color:0x2ed8a0,wireframe:true,transparent:true,opacity:0.9});
+
+function setBadge(txt,type){
+  const b=document.getElementById('badge');
+  b.className='badge '+type;
+  b.innerHTML='<span class="bdot"></span>'+txt;
+}
+
+document.getElementById('dz').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('dz').addEventListener('dragover',e=>{e.preventDefault();document.getElementById('dz').classList.add('over');});
+document.getElementById('dz').addEventListener('dragleave',()=>document.getElementById('dz').classList.remove('over'));
+document.getElementById('dz').addEventListener('drop',e=>{
+  e.preventDefault(); document.getElementById('dz').classList.remove('over');
+  if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+document.getElementById('fileInput').addEventListener('change',e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+
+function extractGeometry(object) {
+  let targetGeo = null;
+  object.traverse((child) => {
+    if (child.isMesh && !targetGeo) {
+      targetGeo = child.geometry.isBufferGeometry ? child.geometry.clone() : new THREE.BufferGeometry().fromGeometry(child.geometry);
+    }
+  });
+  return targetGeo;
+}
+
+function loadFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  setBadge('Loading model...','proc');
+  document.getElementById('emptyState').style.display='none';
+  clearMeshes();
+  
+  const reader=new FileReader();
+  
+  if(ext==='obj' || ext==='gltf' || ext==='dae'){
+    reader.onload = e => parseModelData(e.target.result, ext, file.name);
+    reader.readAsText(file);
+  } else {
+    reader.onload = e => parseModelData(e.target.result, ext, file.name);
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function parseModelData(data, ext, filename) {
+  try {
+    if (ext === 'obj') {
+      const obj = new THREE.OBJLoader().parse(data);
+      const geo = extractGeometry(obj);
+      if(!geo) throw new Error('No mesh found in OBJ file');
+      onGeoReady(geo, filename);
+    } 
+    else if (ext === 'stl') {
+      const geo = new THREE.STLLoader().parse(data);
+      onGeoReady(geo, filename);
+    } 
+    else if (ext === 'ply') {
+      const geo = new THREE.PLYLoader().parse(data);
+      onGeoReady(geo, filename);
+    } 
+    else if (ext === 'fbx') {
+      const obj = new THREE.FBXLoader().parse(data, '');
+      const geo = extractGeometry(obj);
+      if(!geo) throw new Error('No mesh found in FBX file');
+      onGeoReady(geo, filename);
+    } 
+    else if (ext === 'dae') {
+      const collada = new THREE.ColladaLoader().parse(data, '');
+      const geo = extractGeometry(collada.scene);
+      if(!geo) throw new Error('No mesh found in DAE file');
+      onGeoReady(geo, filename);
+    } 
+    else if (ext === 'gltf' || ext === 'glb') {
+      new THREE.GLTFLoader().parse(data, '', (gltf) => {
+        const geo = extractGeometry(gltf.scene);
+        if(!geo) { setBadge('No mesh found in GLTF/GLB file','idle'); return; }
+        onGeoReady(geo, filename);
+      }, (err) => { throw err; });
+    }
+  } catch (err) {
+    setBadge('Error: ' + err.message, 'idle');
+    document.getElementById('emptyState').style.display = '';
+  }
+}
+
+function onGeoReady(geo, name){
+  geo.computeBoundingBox();
+  const box=geo.boundingBox;
+  geo.translate(-(box.max.x+box.min.x)/2,-(box.max.y+box.min.y)/2,-(box.max.z+box.min.z)/2);
+  geo.computeBoundingBox();
+  const size=geo.boundingBox.getSize(new THREE.Vector3());
+  const maxDim=Math.max(size.x,size.y,size.z);
+  if(maxDim>0){ const s=2/maxDim; geo.scale(s,s,s); }
+  geo.computeBoundingBox(); geo.computeVertexNormals();
+  origGeo=geo;
+  const mesh=new THREE.Mesh(geo, MAT_ORIG.clone());
+  scene.add(mesh); origMesh=mesh;
+  
+  // อัปเดตตำแหน่งของ Grid ให้อยู่ที่ฐานด้านล่างสุดของโมเดลเสมอ (Y = min.y)
+  if (grid) {
+    grid.position.y = geo.boundingBox.min.y;
+  }
+
+  const pos=geo.attributes.position;
+  document.getElementById('oV').textContent=pos.count.toLocaleString();
+  document.getElementById('oT').textContent=Math.floor(pos.count/3).toLocaleString();
+  const s2=geo.boundingBox.getSize(new THREE.Vector3());
+  document.getElementById('oB').textContent=`${s2.x.toFixed(2)}x${s2.y.toFixed(2)}x${s2.z.toFixed(2)}`;
+  document.getElementById('oC').textContent='0, 0, 0';
+  fitCamera(geo);
+  setBadge(name,'ready');
+  document.getElementById('btnGen').disabled=false;
+  document.getElementById('emptyState').style.display='none';
+  resetOutput();
+}
+
+function fitCamera(geo){
+  const size=geo.boundingBox.getSize(new THREE.Vector3());
+  ctrl.setRadius(Math.max(size.x,size.y,size.z)*2);
+  ctrl.setTarget(0,0,0);
+}
+
+function clearMeshes(){
+  if(origMesh){
+    scene.remove(origMesh);
+    if(origMesh.geometry) origMesh.geometry.dispose();
+    if(origMesh.material) origMesh.material.dispose();
+    origMesh=null;
+  }
+  if(collMesh){
+    scene.remove(collMesh);
+    if(collMesh.geometry) collMesh.geometry.dispose();
+    if(collMesh.material) collMesh.material.dispose();
+    collMesh=null;
+  }
+  origGeo=null; collGeo=null;
+  ['btnGen','btnExpOBJ','btnExpDAE'].forEach(id=>document.getElementById(id).disabled=true);
+  
+  // รีเซ็ตตำแหน่ง Grid กลับไปที่จุด 0 เมื่อไม่มีโมเดล
+  if (grid) grid.position.y = 0;
+  
+  resetOutput();
+}
+
+function resetOutput(){
+  ['cV','cT','redPct'].forEach(id=>document.getElementById(id).textContent='--');
+  document.getElementById('redfill').style.width='0%';
+  document.getElementById('collInfo').textContent='Generate collider to view info';
+}
+
+function setView(m){
+  viewMode=m;
+  ['Both','Orig','Coll'].forEach(x=>document.getElementById('vb'+x).classList.remove('active'));
+  document.getElementById('vb'+{both:'Both',orig:'Orig',coll:'Coll'}[m]).classList.add('active');
+  updateVis();
+}
+function updateVis(){
+  if(origMesh) origMesh.visible=(viewMode==='both'||viewMode==='orig');
+  if(collMesh) collMesh.visible=(viewMode==='both'||viewMode==='coll');
+}
+function resetCam(){ if(origGeo) fitCamera(origGeo); else { ctrl.setRadius(5); ctrl.setTarget(0,0,0); } }
+let gridOn=true;
+function toggleGrid(){ gridOn=!gridOn; grid.visible=gridOn; document.getElementById('gridBtn').textContent='Grid '+(gridOn?'✓':'✕'); }
+document.getElementById('btnWire').addEventListener('click',()=>{
+  wireMode=!wireMode;
+  document.getElementById('btnWire').textContent=wireMode?'Solid':'Wireframe';
+  if(origMesh) origMesh.material=wireMode?MAT_ORIG_W:MAT_ORIG.clone();
+  if(collMesh) collMesh.material=wireMode?MAT_COLL_W:MAT_COLL.clone();
+});
+
+const ALGO_DESC={
+  convex:'Convex Hull -- Lightweight polygon hull, best for rigid bodies.',
+  simplified:'Quadric Decimation -- Reduces polycount while retaining silhouette shapes.',
+  voxel:'Voxel Hull -- Consistent sampling grid, ideal for complex structures.'
+};
+document.getElementById('algoTabs').querySelectorAll('.algo-tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.algo-tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active'); curAlgo=t.dataset.a;
+    document.getElementById('algoDesc').textContent=ALGO_DESC[curAlgo];
+  });
+});
+
+document.getElementById('redS').addEventListener('input',function(){ document.getElementById('redV').textContent=this.value+'%'; });
+document.getElementById('maxTS').addEventListener('input',function(){
+  const v = Math.min(parseInt(this.value), MAX_TRIANGLES);
+  this.value = v;
+  document.getElementById('maxTV').textContent=v;
+});
+
+function clampPositions(positions) {
+  if (!positions || positions.length === 0) return [];
+  const triCount = Math.floor(positions.length / 9);
+  const userMax = Math.max(4, Math.min(parseInt(document.getElementById('maxTS').value), MAX_TRIANGLES));
+  if (triCount <= userMax) return positions;
+  const step = triCount / userMax;
+  const out = [];
+  for (let i = 0; i < userMax; i++) {
+    const t = Math.floor(i * step) * 9;
+    for (let k = 0; k < 9; k++) out.push(positions[t + k]);
+  }
+  return out;
+}
+
+document.getElementById('btnGen').addEventListener('click', async ()=>{
+  if(!origGeo) return;
+  setBadge('Generating collider...','proc');
+  document.getElementById('btnGen').disabled=true;
+  showProg(10,'Extracting vertices...');
+  await tick();
+
+  const pos=origGeo.attributes.position;
+  const pts=[];
+  for(let i=0; i<pos.count; i++) pts.push(new THREE.Vector3(pos.getX(i),pos.getY(i),pos.getZ(i)));
+
+  showProg(35,'Calculating ' + curAlgo + '...');
+  await tick();
+
+  const userMax = Math.max(4, Math.min(parseInt(document.getElementById('maxTS').value), MAX_TRIANGLES));
+  let result;
+  if(curAlgo==='convex') result=buildConvex(pts, userMax);
+  else if(curAlgo==='simplified') result=buildSimplified(pts, userMax);
+  else result=buildVoxel(pts, userMax);
+
+  result.positions = clampPositions(result.positions);
+  const finalTriCount = Math.floor(result.positions.length / 9);
+
+  showProg(75,'Creating geometry...');
+  await tick();
+
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(result.positions,3));
+  geo.computeVertexNormals();
+  collGeo=geo;
+
+  if(collMesh){scene.remove(collMesh);}
+  collMesh=new THREE.Mesh(geo, wireMode?MAT_COLL_W:MAT_COLL.clone());
+  scene.add(collMesh);
+  updateVis();
+
+  const vC=result.positions.length/3;
+  const tC=finalTriCount;
+  const origT=parseInt(document.getElementById('oT').textContent.replace(/,/g,''))||1;
+  const pct=Math.max(0,Math.min(99,Math.round((1-tC/origT)*100)));
+
+  document.getElementById('cV').textContent=Math.round(vC).toLocaleString();
+  document.getElementById('cT').textContent=tC+' / ' + userMax;
+  document.getElementById('redPct').textContent=pct+'% Smaller';
+  document.getElementById('redfill').style.width=pct+'%';
+  document.getElementById('collInfo').innerHTML='<b style="color:var(--text)">'+curAlgo.charAt(0).toUpperCase()+curAlgo.slice(1)+' Collider</b><br>'+Math.round(vC)+' vertices - '+tC+' triangles<br><span style="color:var(--accent2)">Physics-optimized - max '+userMax+' tris</span>';
+
+  showProg(100,'Done!');
+  hideProg();
+  setBadge('Collider Ready -- '+tC+' tris','ready');
+  document.getElementById('btnGen').disabled=false;
+  document.getElementById('btnExpOBJ').disabled=false;
+  document.getElementById('btnExpDAE').disabled=false;
+});
+
+function tick(){ return new Promise(r=>setTimeout(r,16)); }
+function showProg(p,lbl){ document.getElementById('progSec').style.display=''; document.getElementById('progLbl').textContent=lbl; document.getElementById('pfill').style.width=p+'%'; }
+function hideProg(){ setTimeout(()=>{ document.getElementById('progSec').style.display='none'; },800); }
+
+function buildConvex(pts, maxTri){
+  if(pts.length === 0) return {positions:[], verts:[], faces:[]};
+  const center=new THREE.Vector3();
+  pts.forEach(p=>center.add(p));
+  center.divideScalar(pts.length);
+  const targetTris = Math.max(4, Math.min(maxTri, MAX_TRIANGLES));
+  const N=Math.max(4, Math.floor(Math.sqrt(targetTris/2)));
+  const dirs=[];
+  for(let i=0;i<N;i++){
+    const t=i/N*Math.PI*2;
+    for(let j=0;j<Math.max(2,Math.floor(N/2));j++){
+      const p=(j/(Math.floor(N/2))-.5)*Math.PI;
+      dirs.push(new THREE.Vector3(Math.cos(p)*Math.cos(t),Math.sin(p),Math.cos(p)*Math.sin(t)).normalize());
+    }
+  }
+  const supportSet=new Map();
+  dirs.forEach(d=>{
+    let best=pts[0],bestD=-Infinity;
+    pts.forEach(p=>{ const v=p.clone().sub(center).dot(d); if(v>bestD){bestD=v;best=p;} });
+    const key=best.x.toFixed(5)+','+best.y.toFixed(5)+','+best.z.toFixed(5);
+    supportSet.set(key,best);
+  });
+  return buildHullFromPoints(Array.from(supportSet.values()), targetTris);
+}
+
+function buildHullFromPoints(pts, maxTri){
+  if(pts.length === 0) return {positions:[], verts:[], faces:[]};
+  const targetTris = Math.max(4, Math.min(maxTri || MAX_TRIANGLES, MAX_TRIANGLES));
+  const box=new THREE.Box3();
+  pts.forEach(p=>box.expandByPoint(p));
+  const center=box.getCenter(new THREE.Vector3());
+
+  let wSeg=4, hSeg=3;
+  while((wSeg+1)*(hSeg)*2 <= targetTris && wSeg < 32){ wSeg++; }
+  while(wSeg*hSeg*2 > targetTris && hSeg > 2){ hSeg--; }
+  while(wSeg*hSeg*2 > targetTris){ wSeg = Math.max(3, wSeg-1); }
+
+  if(wSeg < 3) wSeg = 3;
+  if(hSeg < 2) hSeg = 2;
+
+  const geo=new THREE.SphereGeometry(1, wSeg, hSeg);
+  const idxGeo=geo.toNonIndexed();
+  const pos=idxGeo.attributes.position;
+  const positions=[], vertsArr=[], facesArr=[];
+
+  for(let i=0;i<pos.count;i+=3){
+    const face=[];
+    for(let j=0;j<3;j++){
+      const dir=new THREE.Vector3(pos.getX(i+j),pos.getY(i+j),pos.getZ(i+j)).normalize();
+      let best=pts[0],bestD=-Infinity;
+      pts.forEach(p=>{ const d=p.clone().sub(center).dot(dir); if(d>bestD){bestD=d;best=p;} });
+      positions.push(best.x,best.y,best.z);
+      face.push(vertsArr.length);
+      vertsArr.push([best.x,best.y,best.z]);
+    }
+    facesArr.push(face);
+  }
+  
+  geo.dispose();
+  idxGeo.dispose();
+  
+  return {positions, verts:vertsArr, faces:facesArr};
+}
+
+function buildSimplified(pts, maxTri){
+  if(pts.length === 0) return {positions:[], verts:[], faces:[]};
+  const targetTris = Math.max(4, Math.min(maxTri || MAX_TRIANGLES, MAX_TRIANGLES));
+  const cellSize=Math.max(0.02, 0.8/Math.cbrt(targetTris));
+  const clusters=new Map();
+  pts.forEach(p=>{
+    const k=Math.round(p.x/cellSize)+','+Math.round(p.y/cellSize)+','+Math.round(p.z/cellSize);
+    if(!clusters.has(k)) clusters.set(k,{x:0,y:0,z:0,n:0});
+    const c=clusters.get(k); c.x+=p.x; c.y+=p.y; c.z+=p.z; c.n++;
+  });
+  const cpts=Array.from(clusters.values()).map(c=>new THREE.Vector3(c.x/c.n,c.y/c.n,c.z/c.n));
+  return buildHullFromPoints(cpts, targetTris);
+}
+
+function buildVoxel(pts, maxTri){
+  if(pts.length === 0) return {positions:[], verts:[], faces:[]};
+  const targetTris = Math.max(4, Math.min(maxTri || MAX_TRIANGLES, MAX_TRIANGLES));
+  const box=new THREE.Box3();
+  pts.forEach(p=>box.expandByPoint(p));
+  const size=box.getSize(new THREE.Vector3());
+  
+  const res=Math.max(2,Math.min(10,Math.round(Math.cbrt(targetTris/2))));
+  const vx=(size.x || 0.1)/res, vy=(size.y || 0.1)/res, vz=(size.z || 0.1)/res;
+  const filled=new Set();
+  pts.forEach(p=>{
+    const ix=Math.min(res-1,Math.floor((p.x-box.min.x)/vx));
+    const iy=Math.min(res-1,Math.floor((p.y-box.min.y)/vy));
+    const iz=Math.min(res-1,Math.floor((p.z-box.min.z)/vz));
+    filled.add(ix+','+iy+','+iz);
+  });
+  const vpts=[];
+  filled.forEach(k=>{ const s=k.split(','); vpts.push(new THREE.Vector3(box.min.x+(+s[0]+.5)*vx, box.min.y+(+s[1]+.5)*vy, box.min.z+(+s[2]+.5)*vz)); });
+  return buildHullFromPoints(vpts, targetTris);
+}
+
+function downloadFile(content,name,type){ 
+  const a=document.createElement('a'); 
+  a.href=URL.createObjectURL(new Blob([content],{type})); 
+  a.download=name; a.click(); 
+  URL.revokeObjectURL(a.href); 
+}
+
+// 1. EXPORT OBJ
+document.getElementById('btnExpOBJ').addEventListener('click',()=>{
+  if(!collMesh) return;
+  const exporter = new THREE.OBJExporter();
+  const result = exporter.parse(collMesh);
+  downloadFile(result, 'collider.obj', 'text/plain');
+});
+
+// 2. EXPORT DAE (COLLADA FORMAT)
+document.getElementById('btnExpDAE').addEventListener('click', () => {
+  if (!collMesh) return;
+  
+  const pos = collMesh.geometry.attributes.position;
+  let vStr = "", fStr = "";
+  
+  for (let i = 0; i < pos.count; i++) {
+    vStr += `${pos.getX(i).toFixed(5)} ${pos.getY(i).toFixed(5)} ${pos.getZ(i).toFixed(5)} `;
+  }
+  for (let i = 0; i < pos.count; i += 3) {
+    fStr += `${i} ${i+1} ${i+2} `;
+  }
+
+  const vCount = pos.count;
+  const fCount = Math.floor(pos.count / 3);
+  const dateStr = new Date().toISOString();
+
+  const daeContent = `<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor><author>Mesh Collider Generator</author></contributor>
+    <created>${dateStr}</created><modified>${dateStr}</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Y_UP</up_axis>
+  </asset>
+  <library_geometries>
+    <geometry id="collider-mesh" name="Collider">
+      <mesh>
+        <source id="positions">
+          <float_array id="positions-array" count="${vCount * 3}">${vStr.trim()}</float_array>
+          <technique_common>
+            <accessor source="#positions-array" count="${vCount}" stride="3">
+              <param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="vertices">
+          <input semantic="POSITION" source="#positions"/>
+        </vertices>
+        <triangles count="${fCount}">
+          <input semantic="VERTEX" source="#vertices" offset="0"/>
+          <p>${fStr.trim()}</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="ColliderNode" name="Collider" type="NODE">
+        <instance_geometry url="#collider-mesh"/>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>`;
+
+  downloadFile(daeContent, 'collider.dae', 'application/xml');
+});
+
+setTimeout(()=>{
+  const geo=new THREE.TorusKnotGeometry(0.7,0.25,80,14).toNonIndexed();
+  onGeoReady(geo,'demo_torusknot.obj');
+},300);
+</script>
+</body>
+</html>
